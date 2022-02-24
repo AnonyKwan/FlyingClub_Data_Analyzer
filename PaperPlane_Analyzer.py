@@ -101,7 +101,8 @@ def searchBar ():
         if len(wallet_address_user_input) == 42:
             wallet_address = wallet_address_user_input
             # POLYGON API FOR GETTING USER TRANSATIONS... CAN ONLY FETCH LAST 10000 RESULTS
-            response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
+            ramdon_api_key = random.choice(api_key_list)
+            response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey={ramdon_api_key}").text
             # IF ADDRESS IS WRONG
             if int(json.loads(response)["status"]) == 0:
                 st.warning("請重新輸入錢包地址")
