@@ -182,6 +182,7 @@ def stores_transations_calculation ():
         store_info = json.loads(response)
         for transation in store_info['result']:
             # IF RECEVING ADDRESS IS STORE ADDRESS
+            print (transation)
             if  transation['to'].upper() in wallet_address:
                 # GET LAST 30 DAYS TRANSATIONS
                 last_month = (datetime.datetime.now() - datetime.timedelta(days=30))
