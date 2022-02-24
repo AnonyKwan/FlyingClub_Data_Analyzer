@@ -178,13 +178,11 @@ def stores_transations_calculation ():
     users_contributions = {}
     # API TO CHECK EACH STORE TRANSATIONS
     for wallet_address in store_address_list:
-        print (wallet_address)
         response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
         store_info = json.loads(response)
-        print (store_info)
         for transation in store_info['result']:
             # IF RECEVING ADDRESS IS STORE ADDRESS
-            if  transation['to'].upper() in wallet_address.upper():
+            if  transation['to'].upper() in wallet_address:
                 # GET LAST 30 DAYS TRANSATIONS
                 last_month = (datetime.datetime.now() - datetime.timedelta(days=30))
                 if last_month <= datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])):   
