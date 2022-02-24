@@ -169,7 +169,7 @@ def searchBar ():
         else:
             st.warning("請重新輸入錢包地址")
 
-@st.cache(ttl=600)
+@st.cache(ttl=300)
 def stores_transations_calculation ():
     store_address_list = list(store_address_reverse.keys())
     store_name_list = list(store_address.keys())
