@@ -1,6 +1,9 @@
 
 import time
 import datetime
+from turtle import color
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 import pandas as pd
 import requests
@@ -29,6 +32,11 @@ store_address = {
   '食上主義': '0X29F81BF509E05FDC034ADCB18D9E527847B45BC1',
   '酣呷': '0X1F56BFFBAB3987E960D71E1BFEBF6D106431C8C8'
   }
+
+airdrop_address = ['0XFF252828972608B52A056AED2491412163504B06','0XF1EC1E30B3A84A1121C361D579511A167D9CCBF9']
+
+# REVERSE store_address TO "ADDRESS" : "STORE NAME"
+store_address_reverse = dict(map(reversed, store_address.items()))
 
 def sidebar():
     # CSS FOR SIDEBAR
@@ -91,7 +99,7 @@ def searchBar ():
             wallet_address_user_input = st.text_input(label="",placeholder="請輸入錢包地址").lower()
         if len(wallet_address_user_input) == 42:
             wallet_address = wallet_address_user_input
-            # POLYGON API FOR GETTING USER TRANSATIONS... CAN ONLY FETCH LAST 10000 RESULTS, DATA WILL BE INACCURATE AFTER 10000 TRANSATIONS
+            # POLYGON API FOR GETTING USER TRANSATIONS... CAN ONLY FETCH LAST 10000 RESULTS
             response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
             # IF ADDRESS IS WRONG
             if int(json.loads(response)["status"]) == 0:
@@ -110,8 +118,6 @@ def searchBar ():
                 redeem_datetime_within_week = []
                 redeem_store_within_week = []
                 redeem_amount_within_week = []
-                # REVERSE store_address TO "ADDRESS" : "STORE NAME"
-                store_address_reverse = dict(map(reversed, store_address.items()))
                 for transation in redeem_info['result']:
                     if  transation['to'].upper() in wallet_address.upper():
                         total_income += int(transation['value'][:-18])
@@ -145,11 +151,8 @@ def searchBar ():
                     st.metric(label="剩餘 NZ", value=token_remain)   
                 with metric_layout[3]:
                     st.metric(label="已用 NZ", value=token_spent)
-                
-                
 
-
-                # DATA OUTPUT
+                # DATAFRAME OUTPUT
                 expander_layout = st.columns(3)
                 with expander_layout[1]:
                     with st.expander("個人交易記錄 ( 7 日 )"):
@@ -169,7 +172,46 @@ def searchBar ():
         else:
             st.warning("請重新輸入錢包地址")
 
-# def mainPageStore():
+@st.cache(ttl=600)
+def stores_transations_calculation ():
+    store_address_list = list(store_address_reverse.keys())
+    store_name_list = list(store_address.keys())
+    stores_token_received = []
+    total_store_income = 0
+    users_contributions = {}
+    # API TO CHECK EACH STORE TRANSATIONS
+    for wallet_address in store_address_list:
+        print (wallet_address)
+        response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
+        store_info = json.loads(response)
+        print (store_info)
+        for transation in store_info['result']:
+            # IF RECEVING ADDRESS IS STORE ADDRESS
+            if  transation['to'].upper() in wallet_address.upper():
+                # GET LAST 30 DAYS TRANSATIONS
+                last_month = (datetime.datetime.now() - datetime.timedelta(days=30))
+                if last_month <= datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])):   
+                    # NOT ACCEPT TRANSATIONS FROM AIRDROP ADDRESS        
+                    if transation['from'].upper() not in [i for i in airdrop_address] :
+                        total_store_income += int(transation['value'][:-18])
+                        # users_contributions[transation['from']] = {store_address_reverse[transation['to'].upper()]: {
+                        #                                                                                             transation[
+                        #                                                                                                 'hash']: {"Date":datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])),
+                        #                                                                                                         "Spent":transation['value']}}}
+        stores_token_received.append(total_store_income)
+        total_store_income = 0
+    return store_name_list,stores_token_received
+
+def mainPageStoreChart():
+    with st.container():
+        store_name_list,stores_token_received = stores_transations_calculation()    
+        fig = px.bar( x=store_name_list, y=stores_token_received, color=stores_token_received,
+                    labels=dict(x="兌換店家", y="兌換數量",color='熱度')
+                )
+        st.plotly_chart(fig, use_container_width=True)
+
+# def mainPageContributionChart():
+
 
 if __name__ == "__main__":
     paperplane_icon = 'https://flyingclub.io/assets/paperplane-3245df87512ef7c15e7b91cc0cdeae37109489f2c839fd48cb3674606e5fe0b3.png'
@@ -183,3 +225,4 @@ if __name__ == "__main__":
 
     sidebar()
     searchBar()
+    mainPageStoreChart()
