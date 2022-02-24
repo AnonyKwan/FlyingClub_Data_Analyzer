@@ -184,7 +184,9 @@ def stores_transations_calculation ():
     # API TO CHECK EACH STORE TRANSATIONS
     for wallet_address in store_address_list:
         # BECAUSE THE API CALL IS LIMITED, USING MULTIPLE APIKEY INSTATE OF ONE.
-        response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey={random.choice(api_key_list)}").text
+        ramdon_api_key = random.choice(api_key_list)
+        print (f"Using API KEY: {ramdon_api_key}")
+        response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey={ramdon_api_key}").text
         store_info = json.loads(response)
         for transation in store_info['result']:
             # IF RECEVING ADDRESS IS STORE ADDRESS
