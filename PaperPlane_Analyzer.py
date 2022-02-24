@@ -1,5 +1,6 @@
 
-from datetime import datetime
+import time
+import datetime
 import streamlit as st
 import pandas as pd
 import requests
@@ -82,44 +83,103 @@ def sidebar():
         with sidebar_layout_1[3]:
             st.empty()
 
-def mainPage ():
+def searchBar ():
     with st.container():
-        wallet_address = st.text_input(label="",placeholder="請輸入錢包地址").lower()
-        if len(wallet_address) != 0:
-            # POLYGON API FOR GETTING USER TRANSATIONS
-            response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=5&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
-            with st.expander("7日兌換記錄 ( PolygonScan"):
+        searchbar_layout = st.columns([1,2,1])
+        with searchbar_layout[1]:
+            #Actual Search Bar
+            wallet_address_user_input = st.text_input(label="",placeholder="請輸入錢包地址").lower()
+        if len(wallet_address_user_input) == 42:
+            wallet_address = wallet_address_user_input
+            # POLYGON API FOR GETTING USER TRANSATIONS... CAN ONLY FETCH LAST 10000 RESULTS, DATA WILL BE INACCURATE AFTER 10000 TRANSATIONS
+            response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
+            # IF ADDRESS IS WRONG
+            if int(json.loads(response)["status"]) == 0:
+                st.warning("請重新輸入錢包地址")
+            else:
+                
+                ## CALCULATION PROCESS
+                ############################################################################
                 redeem_info = json.loads(response)
                 redeem_datetime = []
                 redeem_store = []
                 redeem_amount = []
+                token_spent = 0
+                token_remain = 0
+                total_income = 0
+                redeem_datetime_within_week = []
+                redeem_store_within_week = []
+                redeem_amount_within_week = []
                 # REVERSE store_address TO "ADDRESS" : "STORE NAME"
                 store_address_reverse = dict(map(reversed, store_address.items()))
                 for transation in redeem_info['result']:
                     if  transation['to'].upper() in wallet_address.upper():
+                        total_income += int(transation['value'][:-18])
                         continue
                     else:
-                        redeem_datetime.append(datetime.utcfromtimestamp(int(transation['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S %a'))
+                        # GET ALL TRANSATIONS
+                        token_spent += int(transation['value'][:-18])
+                        redeem_datetime.append(datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S %a'))
                         # IF STORE ADDRESS IN KEY : VALUE PAIR, USE THE NAME INSTATE
                         if transation['to'].upper() in [i for i in list(store_address_reverse.keys())]:
                             redeem_store.append(store_address_reverse[transation['to'].upper()])
                         else:
                             redeem_store.append(transation['to'])
                         redeem_amount.append(f"   {transation['value'][:-18]} NZ")
-                df = pd.DataFrame(
-                        {"日期": redeem_datetime, '交易錢包': redeem_store,'兌換數量': redeem_amount})
-                st.dataframe(df)
-                st.json(response)
+
+                        # GET LAST 7 DAYS TRANSATIONS
+                        last_week = (datetime.datetime.now() - datetime.timedelta(days=7))
+                        if last_week <= datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])):
+                            redeem_datetime_within_week.append(datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S %a'))
+                            if transation['to'].upper() in [i for i in list(store_address_reverse.keys())]:
+                                redeem_store_within_week.append(store_address_reverse[transation['to'].upper()])
+                            else:
+                                redeem_store_within_week.append(transation['to'])
+                            redeem_amount_within_week.append(f"   {transation['value'][:-18]} NZ")
+                ############################################################################
+
+                # METRIC OUTPUT
+                metric_layout = st.columns([1,3,2,2,2,1])
+                with metric_layout[2]:
+                    token_remain = total_income - token_spent
+                    st.metric(label="剩餘 NZ", value=token_remain)   
+                with metric_layout[3]:
+                    st.metric(label="已用 NZ", value=token_spent)
+                
+                
+
+
+                # DATA OUTPUT
+                expander_layout = st.columns(3)
+                with expander_layout[1]:
+                    with st.expander("個人交易記錄 ( 7 日 )"):
+                        # IF NONE TRANSATION WITIN LAST 7 DAYS, HIDE DATAFRAME
+                        if len(redeem_datetime_within_week) != 0:
+                            df = pd.DataFrame(
+                                # [-9:] last 10 elements from list
+                                    {"日期": reversed(redeem_datetime_within_week[-9:]), '交易錢包': reversed(redeem_store_within_week[-9:]),'交易數量': reversed(redeem_amount_within_week[-9:])})
+                            st.table(df)
+                            # st.dataframe NOT ABLE TO ADJUST WIDTH
+                            # st.dataframe(df)
+                        # FOR DEBUG ONLY
+                        # st.json(json.loads(response))
+
+        elif len(wallet_address_user_input) == 0:
+            pass
+        else:
+            st.warning("請重新輸入錢包地址")
+
+# def mainPageStore():
 
 if __name__ == "__main__":
     paperplane_icon = 'https://flyingclub.io/assets/paperplane-3245df87512ef7c15e7b91cc0cdeae37109489f2c839fd48cb3674606e5fe0b3.png'
     st.set_page_config(
                         page_title="PaperPlane Analyzer",
                         page_icon=paperplane_icon,
-                        layout="centered",
+                        layout="wide",
                         initial_sidebar_state="expanded"
                     )
     st.markdown("<h1 style='text-align: center;'>PaperPlane Analyzer</h1>", unsafe_allow_html=True)
 
     sidebar()
-    mainPage()
+    searchBar()
