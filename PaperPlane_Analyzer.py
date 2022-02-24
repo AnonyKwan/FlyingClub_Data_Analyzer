@@ -84,7 +84,7 @@ def sidebar():
 
 def mainPage ():
     with st.container():
-        wallet_address = st.text_input(label="",placeholder="請輸入錢包地址")
+        wallet_address = st.text_input(label="",placeholder="請輸入錢包地址").lower()
         if len(wallet_address) != 0:
             # POLYGON API FOR GETTING USER TRANSATIONS
             response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address}&startblock=0&endblock=99999999&page=1&offset=5&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
