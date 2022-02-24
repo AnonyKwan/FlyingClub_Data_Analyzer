@@ -4,6 +4,7 @@ from time import sleep
 import plotly.express as px
 import streamlit as st
 import pandas as pd
+import random
 import requests
 import json
 
@@ -32,6 +33,8 @@ store_address = {
   }
 
 airdrop_address = ['0XFF252828972608B52A056AED2491412163504B06','0XF1EC1E30B3A84A1121C361D579511A167D9CCBF9']
+
+api_key_list = ["4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2","FN7RPKGTW7UHXSA6FATIWXQD4M53R9MDF7","5BZDS26XVNHWU4SFJC7E99V7MENRSRSBCJ"]
 
 # REVERSE store_address TO "ADDRESS" : "STORE NAME"
 store_address_reverse = dict(map(reversed, store_address.items()))
@@ -117,6 +120,7 @@ def searchBar ():
                 redeem_store_within_week = []
                 redeem_amount_within_week = []
                 for transation in redeem_info['result']:
+                    print (transation)
                     if  transation['to'].upper() in wallet_address.upper():
                         total_income += int(transation['value'][:-18])
                         continue
@@ -179,16 +183,13 @@ def stores_transations_calculation ():
     users_contributions = {}
     # API TO CHECK EACH STORE TRANSATIONS
     for wallet_address in store_address_list:
-        response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey=4JIJWVNR8HJDJF44C37MF5UJAA3NFMZ5R2").text
+        # BECAUSE THE API CALL IS LIMITED, USING MULTIPLE APIKEY INSTATE OF ONE.
+        response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey={random.choice(api_key_list)}").text
         store_info = json.loads(response)
-        sleep(1)
         for transation in store_info['result']:
             # IF RECEVING ADDRESS IS STORE ADDRESS
-            print (type(transation))
             print (transation)
-            print (transation['to'])
             if  transation['to'].upper() in wallet_address:
-                print ("+++++++++++++++")
                 # GET LAST 30 DAYS TRANSATIONS
                 last_month = (datetime.datetime.now() - datetime.timedelta(days=30))
                 if last_month <= datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])):   
