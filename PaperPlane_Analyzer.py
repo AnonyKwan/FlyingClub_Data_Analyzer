@@ -181,6 +181,8 @@ def stores_transations_calculation ():
     store_name_list = list(store_address.keys())
     stores_token_received = []
     total_store_income = 0
+    store_transation_count_list = []
+    store_transation_count = 0
     users_contributions = {}
     # API TO CHECK EACH STORE TRANSATIONS
     for wallet_address in store_address_list:
@@ -199,19 +201,23 @@ def stores_transations_calculation ():
                     # NOT ACCEPT TRANSATIONS FROM AIRDROP ADDRESS        
                     if transation['from'].upper() not in [i for i in airdrop_address] :
                         total_store_income += int(transation['value'][:-18])
+                        store_transation_count += 1
                         # users_contributions[transation['from']] = {store_address_reverse[transation['to'].upper()]: {
                         #                                                                                             transation[
                         #                                                                                                 'hash']: {"Date":datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])),
-                        #                                                                                                         "Spent":transation['value']}}}
+                        #      
+                        #                                                                                                    "Spent":transation['value']}}}
+        store_transation_count_list.append(store_transation_count)
         stores_token_received.append(total_store_income)
         total_store_income = 0
-    return store_name_list,stores_token_received
+        store_transation_count = 0
+    return store_name_list,stores_token_received,store_transation_count_list
 
 def mainPageStoreChart():
     with st.container():
-        store_name_list,stores_token_received = stores_transations_calculation()    
-        fig = px.bar( x=store_name_list, y=stores_token_received, color=stores_token_received,
-                    labels=dict(x="兌換店家", y="兌換數量",color='熱度'),
+        store_name_list,stores_token_received,store_transation_count_list = stores_transations_calculation()    
+        fig = px.bar( x=store_name_list, y=stores_token_received, color=store_transation_count_list,
+                    labels=dict(x="兌換店家", y="兌換數量",color='兌換次數'),
                     title="28日兌換圖表"
                 )
         fig.update_xaxes(tickangle=45)
