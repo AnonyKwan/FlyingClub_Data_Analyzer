@@ -211,7 +211,8 @@ def mainPageStoreChart():
     with st.container():
         store_name_list,stores_token_received = stores_transations_calculation()    
         fig = px.bar( x=store_name_list, y=stores_token_received, color=stores_token_received,
-                    labels=dict(x="兌換店家", y="兌換數量",color='熱度')
+                    labels=dict(x="兌換店家", y="兌換數量",color='熱度'),
+                    title="28日兌換圖表"
                 )
         fig.update_xaxes(tickangle=45)
         st.plotly_chart(fig, use_container_width=True)
