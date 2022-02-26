@@ -274,7 +274,7 @@ def mainPageContributionChart():
             hovertemplate='<b>%{label} </b> <br>兌換次數: %{value} 次<br>'
         ))
             fig.update_layout(margin = dict(t=30, l=0, r=0, b=0))
-            fig.update_layout(title='30日兌換次數旭日形圖')
+            fig.update_layout(title='30日群友兌換次數旭日形圖')
             st.plotly_chart(fig,use_container_width=True)
 
 
