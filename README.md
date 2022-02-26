@@ -8,4 +8,6 @@
 
 ## Limitations
 * Inaccurate Data output after 10000 transitions per address
-* ENS not support at the moment 
+* ENS not supported at the moment 
+
+### CODE REDESIGN WILL START AFTER FIRST RELEASE

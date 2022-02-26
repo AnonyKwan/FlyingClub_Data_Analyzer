@@ -1,6 +1,6 @@
 
 import datetime
-from time import sleep
+import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 import pandas as pd
@@ -21,16 +21,29 @@ store_address = {
   'Fourplay 2.0': '0X6F5E6FD5555CD1BFD67EBE6A8CA3D1597B4212CA',
   'INDULGE Bistro': '0X5A773D91C3A888EDAAE341C0FED007C0B88D2D39',
   '純愛小吃部': '0X5B48743F42DD21BEE2BCEB6AC2BCA3129E8E1B73',
+
   '栖.Habitat': '0XE1594DC5CEA70071B81E06FED9BBB514852014B7',
   'Vender Bar': '0XF14D93135BEEB0CA3D6B3AF35F7A0CCC040EF588',
   '舟舟 Bar Boat': '0X166CCBCE2493D2D43613AA44151DDC07DA680DF8',
   '安慰劑台中': '0X5CBB9E855FDF4667B3B552CAD493F8700C2DE984',
   'Tipsy Room': '0XFF543AE3BD3B8C3AB98A04C339AC5C0710DB9A71',
+
   'Bar TCRC': '0XEDDEBE2279AC31844CBE4DCE76CCBE31CCECE90E',
   'Bar Home': '0X81391946A00FB986F0DB74A6F83D47B2989FC064',
   '食上主義': '0X29F81BF509E05FDC034ADCB18D9E527847B45BC1',
   '酣呷': '0X1F56BFFBAB3987E960D71E1BFEBF6D106431C8C8'
   }
+
+## TEMPORARY LIST FOR LOCATION 
+store_location = []
+for i in range (len(store_address)):
+    if i <= 11:
+        store_location.append('台北')
+    elif i <= 16 and i > 11:
+        store_location.append('台中')
+    elif i > 16:
+        store_location.append('台南')
+
 
 airdrop_address = ['0XFF252828972608B52A056AED2491412163504B06','0XF1EC1E30B3A84A1121C361D579511A167D9CCBF9','0X8FCDD53837B8C87268EBF0DA6D31D7E41850C22E']
 
@@ -121,7 +134,6 @@ def searchBar ():
                 redeem_store_within_week = []
                 redeem_amount_within_week = []
                 for transation in redeem_info['result']:
-                    print (transation)
                     if  transation['to'].upper() in wallet_address.upper():
                         total_income += int(transation['value'][:-18])
                         continue
@@ -188,12 +200,12 @@ def stores_transations_calculation ():
     for wallet_address in store_address_list:
         # BECAUSE THE API CALL IS LIMITED, USING MULTIPLE APIKEY INSTATE OF ONE.
         ramdon_api_key = random.choice(api_key_list)
-        print (f"Using API KEY: {ramdon_api_key}")
+        # print (f"Using API KEY: {ramdon_api_key}")
         response = requests.get(f"https://api.polygonscan.com/api?module=account&action=tokentx&contractaddress=0x3Fb89b4385779a8513d73Aed99AC6E4b77C34821&address={wallet_address.lower()}&startblock=0&endblock=99999999&page=1&offset=10000&sort=asc&apikey={ramdon_api_key}").text
         store_info = json.loads(response)
         for transation in store_info['result']:
             # IF RECEVING ADDRESS IS STORE ADDRESS
-            print (transation)
+            # print (transation)
             if  transation['to'].upper() in wallet_address:
                 # GET LAST 30 DAYS TRANSATIONS
                 last_month = (datetime.datetime.now() - datetime.timedelta(days=30))
@@ -202,28 +214,130 @@ def stores_transations_calculation ():
                     if transation['from'].upper() not in [i for i in airdrop_address] :
                         total_store_income += int(transation['value'][:-18])
                         store_transation_count += 1
-                        # users_contributions[transation['from']] = {store_address_reverse[transation['to'].upper()]: {
-                        #                                                                                             transation[
-                        #                                                                                                 'hash']: {"Date":datetime.datetime.utcfromtimestamp(int(transation['timeStamp'])),
-                        #      
-                        #                                                                                                    "Spent":transation['value']}}}
+                        # USER_ADDRESS:{
+                        #                STORE_ADDRESS:
+                        #                              TX_HASH:
+                        #                                      DATE :
+                        #                                      SPENT: }
+                        # IF DICT IS EMPTY APPEND STORE ADDRESS, IF STORE ADDRESS EXIT UPDATE TRANSATIONS
+                        if transation['from'].upper() not in list(users_contributions):
+                            users_contributions[transation['from'].upper()] = {wallet_address.upper(): {transation['hash'].upper(): ""}}
+                        elif wallet_address.upper() not in list(users_contributions[transation['from'].upper()]):
+                            users_contributions[transation['from'].upper()].update( {wallet_address.upper(): {transation['hash'].upper(): ""}})
+                        users_contributions[transation['from'].upper()][wallet_address.upper()].update({transation['hash'].upper():{"Spent":transation['value'][:-18]}})
+        
         store_transation_count_list.append(store_transation_count)
         stores_token_received.append(total_store_income)
         total_store_income = 0
         store_transation_count = 0
-    return store_name_list,stores_token_received,store_transation_count_list
+    return store_name_list,stores_token_received,store_transation_count_list,users_contributions
 
 def mainPageStoreChart():
     with st.container():
-        store_name_list,stores_token_received,store_transation_count_list = stores_transations_calculation()    
+        store_name_list,stores_token_received,store_transation_count_list,users_contributions = stores_transations_calculation()    
         fig = px.bar( x=store_name_list, y=stores_token_received, color=store_transation_count_list,
                     labels=dict(x="兌換店家", y="兌換數量",color='兌換次數'),
-                    title="28日兌換圖表"
+                    title="30日兌換圖表"
                 )
         fig.update_xaxes(tickangle=45)
         st.plotly_chart(fig, use_container_width=True)
 
-# def mainPageContributionChart():
+def mainPageContributionChart():
+    store_name_list,stores_token_received,store_transation_count_list,users_contributions = stores_transations_calculation()
+
+    with st.container():
+        usersContributions = st.columns(2)
+        index = 0
+        tp = 0 
+        tz = 0
+        tn = 0
+        for location in store_location:
+            # print (store_transation_count_list[index])
+            if "台北" in location:
+                tp += store_transation_count_list[index]
+            if "台中" in location:
+                tz += store_transation_count_list[index]
+            if "台南" in location:
+                tn += store_transation_count_list[index]
+            index += 1
+        sunburst_labels = ['台北','台中','台南'] + store_name_list
+        sunburst_parents = ['全台','全台','全台'] + store_location
+        sunburst_values = [tp,tz,tn] + store_transation_count_list
+
+        with usersContributions[0]:
+
+            fig =go.Figure(go.Sunburst(
+            labels=sunburst_labels,
+            parents=sunburst_parents,
+            values=sunburst_values,
+            branchvalues="total",
+            hovertemplate='<b>%{label} </b> <br>兌換次數: %{value} 次<br>'
+        ))
+            fig.update_layout(margin = dict(t=30, l=0, r=0, b=0))
+            fig.update_layout(title='30日兌換次數旭日形圖')
+            st.plotly_chart(fig,use_container_width=True)
+
+
+        with usersContributions[1]:
+            index = 0
+            tp_token_received = 0 
+            tz_token_received = 0
+            tn_token_received = 0
+            for location in store_location:
+                if "台北" in location:
+                    tp_token_received += stores_token_received[index]
+                if "台中" in location:
+                    tz_token_received += stores_token_received[index]
+                if "台南" in location:
+                    tn_token_received += stores_token_received[index]
+                index += 1
+            
+            store_name_sunburst = []    
+            user_address_sunburst = []
+            contribution_value = []
+            total_contribute = 0
+            user_repeat_index = 1
+            for user in users_contributions:
+                for store in users_contributions[user]:
+                    # ONE ADDRESS CANNOT BE SHOWING ON MULTIPLE STORE / TEMPORARY SOLUTIONS
+                    if user in user_address_sunburst:
+                        user_address_sunburst.append(f"{user} x {user_repeat_index}")
+                        user_repeat_index += 1
+                    else:
+                        user_address_sunburst.append(user)
+                    store_name_sunburst.append(store_address_reverse[store]) 
+                    for transation in  users_contributions[user][store]:
+                        for contribution_each_address in users_contributions[user][store][transation]:
+                            for line in users_contributions[user][store][transation][contribution_each_address].split("\n"): 
+                                total_contribute += int(line)
+                    contribution_value.append(int(total_contribute))
+                    total_contribute = 0
+                
+            contribute_sunburst_labels = ['台北','台中','台南'] + store_name_list + user_address_sunburst
+            contribute_sunburst_parents = ['全台','全台','全台'] + store_location + store_name_sunburst
+            contribute_sunburst_values = [tp_token_received,tz_token_received,tn_token_received] + stores_token_received + contribution_value
+
+            # data = dict(
+            #     錢包地址=contribute_sunburst_labels,
+            #     區域=contribute_sunburst_parents,
+            #     兌換數量=contribute_sunburst_values)
+
+            # fig = px.sunburst(
+            #     data,
+            #     names='錢包地址',
+            #     parents='區域',
+            #     values='兌換數量',
+            # )   
+            fig =go.Figure(go.Sunburst(
+                    labels=contribute_sunburst_labels,
+                    parents=contribute_sunburst_parents,
+                    values=contribute_sunburst_values,
+                    branchvalues="total",
+                    hovertemplate='<b>%{label} </b> <br>兌換數量: %{value} NZ<br>',
+                ))
+            fig.update_layout(margin = dict(t=30, l=0, r=0, b=0))
+            fig.update_layout(title='30日群友兌換數量圖')
+            st.plotly_chart(fig,use_container_width=True)
 
 
 if __name__ == "__main__":
@@ -239,3 +353,4 @@ if __name__ == "__main__":
     sidebar()
     searchBar()
     mainPageStoreChart()
+    mainPageContributionChart()
